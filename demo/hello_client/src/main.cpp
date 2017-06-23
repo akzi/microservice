@@ -6,7 +6,7 @@
 
 const char *nameserver_addr = "127.0.0.1:10080";
 
-int main()
+int main(int argc, char *argv[])
 {
 	acl::acl_cpp_init();
 	acl::log::stdout_open(true);
@@ -20,15 +20,19 @@ int main()
 
 	req.name = "akzi";
 
-	acl::http_rpc_client::status_t status =
-		client.json_call("/hello_server/hello/say_hello",req, resp);
+    for (size_t i = 0; i < atoi(argv[1]); i++)
+    {
+        acl::http_rpc_client::status_t status =
+            client.json_call("/hello_server/hello/say_hello", req, resp);
 
-	if (!status)
-	{
-		logger("json_call error: %s",status.error_str_.c_str());
-	}
-	else 
-		logger("json_call ok. resp:%s",resp.str.c_str()); 
+        if (!status)
+        {
+            logger("json_call error: %s", status.error_str_.c_str());
+        }
+        else
+            logger("json_call ok. resp:%s", resp.str.c_str());
+    }
+	
 
 	getchar();
 	return 0;
