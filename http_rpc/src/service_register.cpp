@@ -56,8 +56,7 @@ namespace acl
 			it != services_.end(); ++it)
 		{
 			std::vector<string> service_paths;
-			for (std::set<string>::iterator
-				set_it = it->second.begin();
+			for (std::set<string>::iterator set_it = it->second.begin();
 				set_it != it->second.end();
 				set_it++)
 			{

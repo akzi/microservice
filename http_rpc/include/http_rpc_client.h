@@ -2,7 +2,7 @@
 
 namespace acl
 { 
-	class http_rpc_client: protected thread
+	class http_rpc_client
 	{ 
 	public:
 		static http_rpc_client &get_instance()
@@ -27,6 +27,8 @@ namespace acl
 			int ret_;
 			string error_str_;
 		};
+        ~http_rpc_client();
+
         void start_connect_monitor();
 
 
@@ -39,22 +41,24 @@ namespace acl
 		void add_nameserver(const string &addr);
 
 
-		void add_service(const string &addr, const string &service_path, 
-			int conn_timeout = 30, int rw_timeout  = 30);
+		void add_service(const string &addr, 
+                         const string &service_path, 
+                         int conn_timeout = 30, 
+                         int rw_timeout  = 30);
 
 
 
 		void add_service(const string &addr, 
-			const std::vector<string> &service_paths,
-			int conn_timeout = 30, int rw_timeout = 30);
+                         const std::vector<string> &service_paths,
+                         int conn_timeout = 30, 
+                         int rw_timeout = 30);
 
 
 		template<class REQ, class RESP>
-		status_t json_call(
-			const string &service_name,
-			const REQ &req_type, 
-			RESP &resp, 
-			unsigned int rw_timeout = 30)
+		status_t json_call(const string &service_name,
+                           const REQ &req_type, 
+                           RESP &resp, 
+                           unsigned int rw_timeout = 30)
 		{ 
 			string buffer;
 
@@ -77,11 +81,10 @@ namespace acl
 		}
 
 		template<class REQ, class RESP>
-		status_t pb_call(
-			const string &service_name,
-			const REQ &req,
-			RESP &resp,
-			unsigned int rw_timeout = 30)
+		status_t pb_call(const string &service_name,
+                         const REQ &req,
+                         RESP &resp,
+                         unsigned int rw_timeout = 30)
 		{
 			string buffer;
 			std::string data = req.SerializeAsString();
@@ -99,53 +102,60 @@ namespace acl
 			return status_t(-1,"ParseFromArray error");
 		}
 
-        status_t invoke_http_req(
-                const string &service_path,
-                const char *context_type,
-                const string&req_data,
-                string &resp_buffer,
-                unsigned int rw_timeout = 30);
+        status_t invoke_http_req(const string &service_path,
+                                 const char *context_type,
+                                 const string&req_data,
+                                 string &resp_buffer,
+                                 unsigned int rw_timeout = 30);
     private:
+        struct http_rpc_service_info 
+        {
+            // /server/module/service
+            string service_path_;
+            std::vector<string> addrs_;
+            unsigned int index_;
+        };
+
 		http_rpc_client();
 		http_rpc_client(const http_rpc_client&);
 		http_rpc_client &operator =(const http_rpc_client&);
 
 		void init();
 
-        status_t invoke_http_req(
-                const string &service_path,
-                http_request_pool *pool,
-                const char *context_type,
-                const string &req_data,
-                acl::string &resp_buffer,
-                unsigned int rw_timeout);
+        status_t invoke_http_req(const string &service_path,
+                                 http_request_pool *pool,
+                                 const char *context_type,
+                                 const string &req_data,
+                                 acl::string &resp_buffer,
+                                 unsigned int rw_timeout);
 
 
-		bool find_connect_pool(
-			const string &service_name, 
-			std::vector<connect_pool*> &pools);
+		bool find_connect_pool(const string &service_name, 
+                               std::vector<connect_pool*> &pools);
 
-		bool get_connect_pool(
-			const string &service_name,
-			std::vector<connect_pool*> &pools);
+		bool get_connect_pool(const string &service_name,
+                              std::vector<connect_pool*> &pools);
 
-		bool rpc_find_service_addr(
-			const string &service_name, 
-			std::vector<string> &addrs);
+		bool rpc_find_service_addr(const string &service_name, 
+                                   std::vector<string> &addrs);
 		
 		void update_services_addr();
 
-		virtual void *run();
+        http_rpc_service_info *
+            get_service_info(const string &service_path);
 
+        class services_sync : public thread
+        {
+        public:
+            void *run();
+            void stop();
+            http_rpc_client *client_;
+            bool stop_;
+        };
 	private:
 		locker service_addrs_locker_;
-		struct http_rpc_service_info
-		{ 
-			//{ /server/module/service}
-			string service_path_;
-			std::vector<string> addrs_;
-			unsigned int index_;
-		};
+		
+        
 		//service_name:addr
 		std::map<string, http_rpc_service_info*> service_addrs_;
 
@@ -160,5 +170,7 @@ namespace acl
         connect_monitor* monitor_;
 
         http_request_manager *conn_manager_;
+
+        services_sync services_sync_;
 	};
 }
